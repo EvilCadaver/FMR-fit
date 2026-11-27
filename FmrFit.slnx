@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FmrFit.App/FmrFit.App.csproj" />
+    <Project Path="src/FmrFit.Core/FmrFit.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FmrFit.Core.Tests/FmrFit.Core.Tests.csproj" />
+  </Folder>
+</Solution>

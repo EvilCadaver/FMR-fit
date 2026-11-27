@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="using:ScottPlot.Avalonia"
+        xmlns:local="using:FmrFit.App"
+        mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="800"
+        x:Class="FmrFit.App.MainWindow"
+        WindowStartupLocation="CenterScreen"
+        Title="FMR-fit">
+    <!-- The right panel is docked first so it spans the full height; the top bar then ends at the graph's width. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Right" Width="300" Padding="12,8,12,12"
+                BorderThickness="1,0,0,0" BorderBrush="#40808080">
+            <!-- Shared size scope: the frequency column has the same width in the header and in every row. -->
+            <DockPanel Grid.IsSharedSizeScope="True">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                    <TextBlock Text="Work files" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Name="RefreshButton" Content="Refresh" HotKey="F5"
+                            ToolTip.Tip="Reload the work files from the folder (F5)"
+                            Click="RefreshButton_Click" />
+                </Grid>
+
+                <!-- Column names; the margin matches the list items' padding so the columns line up. -->
+                <Grid DockPanel.Dock="Top" Margin="12,0,12,4" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Frequency" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="f (GHz)" HorizontalAlignment="Right" Opacity="0.7" />
+                    <TextBlock Grid.Column="1" Text="File name" Opacity="0.7" />
+                </Grid>
+
+                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                    <Button Grid.Column="0" Name="FitButton" Content="Fit…" IsEnabled="False"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Fit peaks to the selected work file"
+                            Click="FitButton_Click" />
+                    <Button Grid.Column="1" Name="ModifyButton" Content="Modify…" IsEnabled="False"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Re-open the selected file's measurement in Data import; Finish replaces the file"
+                            Click="ModifyButton_Click" />
+                    <Button Grid.Column="2" Name="RemoveButton" Content="Remove" IsEnabled="False"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Delete the selected work file"
+                            Click="RemoveButton_Click" />
+                </Grid>
+
+                <ListBox Name="FileList" SelectionChanged="FileList_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="local:WorkFileItem">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Frequency" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <!-- Invisible placeholder reserves room for values up to "44.444". -->
+                                <TextBlock Text="44.444" Opacity="0" />
+                                <TextBlock Text="{Binding FrequencyText}" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="1" Text="{Binding NameText}"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding Path}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8" Margin="8">
+            <Button Grid.Column="0" Name="OpenProjectButton" Content="Open…" IsEnabled="False"
+                    ToolTip.Tip="To be implemented" ToolTip.ShowOnDisabled="True" />
+            <Button Grid.Column="1" Name="SaveProjectButton" Content="Save…" IsEnabled="False"
+                    ToolTip.Tip="Archive the current work files as a .zip in the Projects folder"
+                    Click="SaveProjectButton_Click" />
+            <Button Grid.Column="2" Name="ImportDataButton" Content="Import data…" Margin="8,0,0,0"
+                    Click="ImportDataButton_Click" />
+            <TextBlock Grid.Column="3" Name="StatusText" VerticalAlignment="Center" Opacity="0.7"
+                       TextTrimming="CharacterEllipsis" Margin="4,0,0,0" />
+            <Button Grid.Column="4" Name="ExportButton" Content="Export…" IsEnabled="False"
+                    ToolTip.Tip="Export work files, e.g. as one CSV for 3D plots"
+                    Click="ExportButton_Click" />
+        </Grid>
+
+        <ScottPlot:AvaPlot Name="Plot" />
+    </DockPanel>
+</Window>

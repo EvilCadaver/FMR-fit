@@ -1,0 +1,237 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="using:ScottPlot.Avalonia"
+        xmlns:local="using:FmrFit.App"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="550"
+        x:Class="FmrFit.App.DataImport"
+        WindowStartupLocation="CenterOwner"
+        Title="FMR-fit – Data import">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="8">
+            <Button Grid.Column="0" Name="OpenButton" Content="Open…" HotKey="Ctrl+O"
+                    ToolTip.Tip="Open a measurement CSV file (Ctrl+O)"
+                    Click="OpenButton_Click" />
+            <TextBlock Grid.Column="1" Name="StatusText" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Text="Open a measurement file to plot it." />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Name="NextButton" Content="Next" IsEnabled="False"
+                        ToolTip.Tip="Save the processed X as a work file and open the next measurement"
+                        Click="NextButton_Click" />
+                <Button Name="FinishButton" Content="Finish" IsEnabled="False" Classes="accent"
+                        ToolTip.Tip="Save the processed X as a work file and close"
+                        Click="FinishButton_Click" />
+                <!-- Not IsCancel: Esc must not close the window (it restores a number entry being edited). -->
+                <Button Name="CancelButton" Content="Cancel"
+                        ToolTip.Tip="Close without saving (asks first if there is an unsaved import or changed settings)"
+                        Click="CancelButton_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Border DockPanel.Dock="Right" Width="316" Padding="12"
+                BorderThickness="1,0,0,0" BorderBrush="#40808080">
+            <DockPanel>
+                <!-- Outside the scroll area so they stay visible; right margin aligns them with the scrolled inputs. -->
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,16,12">
+                    <ComboBox Name="SignalSelector" SelectedIndex="0"
+                              HorizontalAlignment="Stretch"
+                              ToolTip.Tip="Form of the processed X to plot (red) and to show in the main window. All three are saved in the work file."
+                              SelectionChanged="SignalSelector_SelectionChanged">
+                        <ComboBoxItem Content="Signal" />
+                        <ComboBoxItem Content="Integral" />
+                        <ComboBoxItem Content="Derivative" />
+                    </ComboBox>
+                    <Grid Name="OffsetRow" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" IsEnabled="False">
+                        <CheckBox Name="ApplyOffsetCheckBox" Content="Offset to 0" VerticalAlignment="Center"
+                                  ToolTip.Tip="Add the offset to the shown form (signal, integral or derivative) in the plot, the main window, fitting and the 3D export. Off: the offset is kept but not used. On by default for an integral or a ~P measurement. The work file always stores the data without the offset."
+                                  IsCheckedChanged="ApplyOffsetCheckBox_IsCheckedChanged" />
+                        <local:NumberBox Grid.Column="1" Name="OffsetInput" Format="0.####E+0" IsEnabled="False"
+                                         Description="Offset added to the shown form (V)."
+                                         ValueCommitted="OffsetInput_ValueCommitted" />
+                        <!-- Square: the width matches the row height set by the entry. -->
+                        <Button Grid.Column="2" Name="AutoOffsetButton" Content="A" IsEnabled="False"
+                                Width="32" Padding="0" VerticalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                ToolTip.Tip="Automatic: set the offset so that the minimum of the shown form is 0"
+                                Click="AutoOffsetButton_Click" />
+                    </Grid>
+                </StackPanel>
+                <ScrollViewer>
+                    <!-- Right margin keeps the overlay scrollbar off the inputs. -->
+                    <StackPanel Spacing="8" Margin="0,0,16,0">
+                        <TextBlock Text="Measurement" FontWeight="SemiBold" FontSize="15" />
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                              ColumnSpacing="10" RowSpacing="4">
+                            <TextBlock Grid.Row="0" Text="Sample" Opacity="0.7" />
+                            <SelectableTextBlock Grid.Row="0" Grid.Column="1" Name="SampleText" Text="–"
+                                                 TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="1" Text="Frequency" Opacity="0.7" />
+                            <SelectableTextBlock Grid.Row="1" Grid.Column="1" Name="FrequencyText" Text="–" />
+                            <TextBlock Grid.Row="2" Text="Power" Opacity="0.7" />
+                            <SelectableTextBlock Grid.Row="2" Grid.Column="1" Name="PowerText" Text="–" />
+                            <TextBlock Grid.Row="3" Text="Sweep rate" Opacity="0.7" />
+                            <SelectableTextBlock Grid.Row="3" Grid.Column="1" Name="SweepRateText" Text="–"
+                                                 TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="4" Text="Recorded" Opacity="0.7" VerticalAlignment="Center" />
+                            <ComboBox Grid.Row="4" Grid.Column="1" Name="RecordedSelector" SelectedIndex="0"
+                                      HorizontalAlignment="Stretch"
+                                      ToolTip.Tip="What the lock-in measured: the field derivative dP/dH (field modulation) or a signal proportional to the absorbed power P. Saved in the work file; the 3D export only combines files that give the same quantity (e.g. integrated dP/dH and ~P are both P)."
+                                      SelectionChanged="RecordedSelector_SelectionChanged">
+                                <ComboBoxItem Content="dP/dH" />
+                                <ComboBoxItem Content="~P" />
+                            </ComboBox>
+                        </Grid>
+
+                        <TextBlock Text="Comment" Opacity="0.7" Margin="0,4,0,0" />
+                        <SelectableTextBlock Name="CommentText" Text="–" TextWrapping="Wrap" />
+
+                        <TextBlock Text="SR850 settings" Opacity="0.7" Margin="0,4,0,0" />
+                        <SelectableTextBlock Name="LockInText" Text="–" TextWrapping="Wrap" />
+
+                        <Separator Margin="0,8" />
+
+                        <StackPanel Name="SmoothingPanel" Spacing="8" IsEnabled="False">
+                            <TextBlock Text="Smoothing" FontWeight="SemiBold" FontSize="15" />
+                            <ComboBox Name="SmoothingSelector" SelectedIndex="0" HorizontalAlignment="Stretch"
+                                      SelectionChanged="SmoothingSelector_SelectionChanged">
+                                <ComboBoxItem Content="None" />
+                                <ComboBoxItem Content="FFT" />
+                                <ComboBoxItem Content="Savitzky-Golay" />
+                            </ComboBox>
+                            <Grid Name="SmoothingPointsRow" ColumnDefinitions="80,*" ColumnSpacing="8" IsVisible="False">
+                                <TextBlock Text="Points" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Column="1" Name="SmoothingPointsInput"
+                                                 Minimum="2" Maximum="999" Step="1" Format="0" Value="3"
+                                                 Description="Span in grid points. FFT: shortest period kept. Savitzky-Golay: window (odd)."
+                                                 ValueCommitted="SmoothingPointsInput_ValueCommitted" />
+                            </Grid>
+                            <Grid Name="SmoothingOrderRow" ColumnDefinitions="80,*" ColumnSpacing="8" IsVisible="False">
+                                <TextBlock Text="Polynomial" VerticalAlignment="Center" Opacity="0.7" />
+                                <ComboBox Grid.Column="1" Name="SmoothingOrderSelector" SelectedIndex="1"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="SmoothingOrderSelector_SelectionChanged">
+                                    <ComboBoxItem Content="Linear" />
+                                    <ComboBoxItem Content="Quadratic" />
+                                    <ComboBoxItem Content="Cubic" />
+                                    <ComboBoxItem Content="Quartic" />
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+
+                        <Separator Margin="0,8" />
+
+                        <TextBlock Text="Sweep correction (Oe)" FontWeight="SemiBold" FontSize="15" />
+                        <local:NumberBox Name="CorrectionInput" Minimum="-500" Maximum="500" Step="0.1" Format="0.0"
+                                         IsEnabled="False" Description="Field shift between the up and down sweeps."
+                                         ValueCommitted="Input_ValueCommitted" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0" Name="AutoCorrectionButton" Content="Auto" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="AutoCorrectionButton_Click" />
+                            <Button Grid.Column="1" Name="ResetCorrectionButton" Content="Reset" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="ResetCorrectionButton_Click" />
+                        </Grid>
+
+                        <Separator Margin="0,8" />
+
+                        <TextBlock Text="Phase (deg)" FontWeight="SemiBold" FontSize="15" />
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <!-- Square: the width matches the row height set by the entry. -->
+                            <Button Grid.Column="0" Name="PhaseMinus90Button" Content="−90" IsEnabled="False"
+                                    Width="32" Padding="0" VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    ToolTip.Tip="Rotate the phase by −90°"
+                                    Click="PhaseMinus90Button_Click" />
+                            <local:NumberBox Grid.Column="1" Name="PhaseInput" Minimum="-360" Maximum="360" Step="0.1" Format="0.0"
+                                             IsEnabled="False" Description="Lock-in phase; Reset = the phase the file was recorded with."
+                                             ValueCommitted="Input_ValueCommitted" />
+                            <Button Grid.Column="2" Name="PhasePlus90Button" Content="+90" IsEnabled="False"
+                                    Width="32" Padding="0" VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    ToolTip.Tip="Rotate the phase by +90°"
+                                    Click="PhasePlus90Button_Click" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0" Name="AutoPhaseButton" Content="Auto" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="AutoPhaseButton_Click" />
+                            <Button Grid.Column="1" Name="ResetPhaseButton" Content="Reset" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="ResetPhaseButton_Click" />
+                        </Grid>
+
+                        <Separator Margin="0,8" />
+
+                        <StackPanel Name="ProcessedPanel" Spacing="8" IsEnabled="False">
+                            <TextBlock Text="Processed X (red)" FontWeight="SemiBold" FontSize="15" />
+                            <ComboBox Name="SweepSelector" SelectedIndex="0" HorizontalAlignment="Stretch"
+                                      SelectionChanged="SweepSelector_SelectionChanged">
+                                <ComboBoxItem Content="Up &amp; down" />
+                                <ComboBoxItem Content="Up only" />
+                                <ComboBoxItem Content="Down only" />
+                            </ComboBox>
+
+                            <TextBlock Text="Time background" Margin="0,4,0,0" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Grid.Row="0" Text="Intercept (V)" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="0" Grid.Column="1" Name="TimeInterceptInput"
+                                                 Format="0.####E+0" Description="Time background c + s·t subtracted from X: c."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                                <TextBlock Grid.Row="1" Text="Slope (V/s)" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="1" Grid.Column="1" Name="TimeSlopeInput"
+                                                 Format="0.####E+0" Description="Time background c + s·t subtracted from X: s."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                            </Grid>
+                            <TextBlock Text="Auto will be implemented soon." FontSize="12" Opacity="0.7" />
+
+                            <TextBlock Text="Field background" Margin="0,4,0,0" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Grid.Row="0" Text="Intercept (V)" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="0" Grid.Column="1" Name="FieldInterceptInput"
+                                                 Format="0.####E+0" Description="Field background c + s·H subtracted from X: c."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                                <TextBlock Grid.Row="1" Text="Slope (V/Oe)" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="1" Grid.Column="1" Name="FieldSlopeInput"
+                                                 Format="0.####E+0" Description="Field background c + s·H subtracted from X: s."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <Button Grid.Column="0" Content="Auto" Click="AutoFieldBackgroundButton_Click"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Grid.Column="1" Content="Reset" Click="ResetFieldBackgroundButton_Click"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            </Grid>
+
+                            <TextBlock Text="Interpolation (Oe)" Margin="0,4,0,0" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                                <TextBlock Grid.Row="0" Text="From" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="0" Grid.Column="1" Name="GridFromInput"
+                                                 Step="10" Format="0.#" Description="First field of the interpolation grid."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                                <TextBlock Grid.Row="1" Text="To" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="1" Grid.Column="1" Name="GridToInput"
+                                                 Step="10" Format="0.#" Description="Last field of the interpolation grid."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                                <TextBlock Grid.Row="2" Text="Step" VerticalAlignment="Center" Opacity="0.7" />
+                                <local:NumberBox Grid.Row="2" Grid.Column="1" Name="GridStepInput"
+                                                 Minimum="0.1" Step="1" Format="0.#" Value="10" Description="Spacing of the interpolation grid."
+                                                 ValueCommitted="Input_ValueCommitted" />
+                            </Grid>
+                            <Button Content="Reset range" Click="ResetGridButton_Click"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+
+                            <CheckBox Name="NormalizePowerCheckBox" Content="Normalize to 10 dBm"
+                                      IsChecked="True" IsEnabled="False" Margin="0,4,0,0"
+                                      IsCheckedChanged="NormalizePowerCheckBox_IsCheckedChanged" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <ScottPlot:AvaPlot Name="Plot" />
+    </DockPanel>
+</Window>

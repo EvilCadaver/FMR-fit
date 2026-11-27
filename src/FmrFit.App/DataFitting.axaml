@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="using:ScottPlot.Avalonia"
+        xmlns:local="using:FmrFit.App"
+        mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="800"
+        x:Class="FmrFit.App.DataFitting"
+        WindowStartupLocation="CenterOwner"
+        Title="FMR-fit – Data fitting">
+    <DockPanel>
+        <Border DockPanel.Dock="Right" Width="460" Padding="12,8,12,12"
+                BorderThickness="1,0,0,0" BorderBrush="#40808080">
+            <DockPanel>
+                <!-- Outside the scroll area so it stays visible; right margin aligns it with the scrolled inputs. -->
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,0,16,8">
+                    <Button Grid.Column="0" Name="SaveButton" Content="Save" Classes="accent"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Save the fit next to the work file ([name].fit.csv) and close"
+                            Click="SaveButton_Click" />
+                    <Button Grid.Column="1" Name="NextButton" Content="Next"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Save the fit and open the next work file of the main list (after the last, the first)"
+                            Click="NextButton_Click" />
+                    <Button Grid.Column="2" Name="DiscardButton" Content="Discard"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Close without saving (asks first if there are unsaved changes)"
+                            Click="DiscardButton_Click" />
+                </Grid>
+                <ScrollViewer>
+                    <!-- Right margin keeps the overlay scrollbar off the inputs. -->
+                    <StackPanel Spacing="8" Margin="0,0,16,0">
+                        <!-- Fit range: entries are created in code (tinted like other minimum/maximum entries). -->
+                        <Grid Name="RangeRow" ColumnDefinitions="*,110,110" ColumnSpacing="6" Margin="0,4,0,0">
+                            <TextBlock Text="Fit range (Oe)" FontWeight="SemiBold" VerticalAlignment="Center"
+                                       ToolTip.Tip="Only points in this field range are fitted and counted in the result; outside it the graph is grey" />
+                        </Grid>
+
+                        <Separator Margin="0,4" />
+
+                        <TextBlock Text="Peaks" FontWeight="SemiBold" FontSize="15" />
+                        <TextBlock Text="Add Function" Opacity="0.7" />
+                        <ComboBox Name="ShapeSelector" HorizontalAlignment="Stretch" />
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0" Name="AddPeakButton" Content="Add peak"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Add a peak on the largest feature the current peaks don't explain"
+                                    Click="AddPeakButton_Click" />
+                            <Button Grid.Column="1" Name="RemovePeakButton" Content="Remove peak" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Remove the selected peak"
+                                    Click="RemovePeakButton_Click" />
+                            <Button Grid.Column="2" Name="ReloadButton" Content="Reload" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Reload the peaks from the saved fit, discarding changes"
+                                    Click="ReloadButton_Click" />
+                        </Grid>
+
+                        <ListBox Name="PeakList" Height="300" Margin="0,4,0,0"
+                                 SelectionChanged="PeakList_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="local:PeakListItem">
+                                    <TextBlock Text="{Binding Text}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0" Name="FitButton" Content="Fit" Classes="accent" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Fit all peak parameters together (Levenberg–Marquardt)"
+                                    Click="FitButton_Click" />
+                            <Button Grid.Column="1" Name="FitSelectedButton" Content="Fit selected" IsEnabled="False"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Fit only the selected peak; all other peaks stay locked"
+                                    Click="FitSelectedButton_Click" />
+                            <!-- Square: the width matches the row height set by the text buttons. -->
+                            <Button Grid.Column="2" Name="RefreshButton" IsEnabled="False"
+                                    Width="32" Padding="0" VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    ToolTip.Tip="Refresh: recompute the result and redraw the peaks, without fitting"
+                                    Click="RefreshButton_Click">
+                                <PathIcon Width="16" Height="16"
+                                          Data="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z" />
+                            </Button>
+                        </Grid>
+
+                        <Separator Margin="0,8" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Adjust selected peak" FontWeight="SemiBold" FontSize="15"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Name="FixAllButton" Content="Fix all" IsEnabled="False"
+                                    MinWidth="90" HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="Fix all parameters of the selected peak for fitting, or free them all again"
+                                    Click="FixAllButton_Click" />
+                        </Grid>
+                        <TextBlock Name="AdjustHint" TextWrapping="Wrap" Opacity="0.7"
+                                   Text="No peaks yet. Choose a function and press Add peak." />
+                        <!-- Rows for the selected peak's parameters are built in code: value and limit entries, and a
+                             slider for each width and amplitude. The position moves with the slider under the graph. -->
+                        <StackPanel Name="AdjustPanel" Spacing="2" />
+
+                        <Separator Margin="0,8" />
+
+                        <TextBlock Text="Result" FontWeight="SemiBold" FontSize="15" />
+                        <SelectableTextBlock Name="ResultText" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top" Name="TitleText" Margin="12,8" FontSize="15" FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis" />
+
+        <!-- Main pane: data and peaks; secondary pane: residual, sharing the field axis. Between them, a slider for the
+             selected peak's position whose track spans the field axis (margins are set in code). -->
+        <Grid RowDefinitions="3*,Auto,*">
+            <ScottPlot:AvaPlot Grid.Row="0" Name="MainPlot" />
+            <!-- Behind the slider: blue where the position is below its minimum, red where it is above its maximum. -->
+            <Canvas Grid.Row="1" Name="XcShading" IsHitTestVisible="False" ClipToBounds="True">
+                <Rectangle Name="XcBelowMin" Fill="#803D8BFD" Height="8" RadiusX="2" RadiusY="2" IsVisible="False" />
+                <Rectangle Name="XcAboveMax" Fill="#80E5534B" Height="8" RadiusX="2" RadiusY="2" IsVisible="False" />
+            </Canvas>
+            <Slider Grid.Row="1" Name="XcSlider" IsEnabled="False" Padding="0" Margin="83,5,13,5"
+                    ToolTip.Tip="Position of the selected peak"
+                    ValueChanged="XcSlider_ValueChanged">
+                <!-- Slim: template height = thumb height, so the thumb is centred and the gap comes only from the margin. -->
+                <Slider.Resources>
+                    <x:Double x:Key="SliderHorizontalHeight">14</x:Double>
+                    <x:Double x:Key="SliderHorizontalThumbWidth">14</x:Double>
+                    <x:Double x:Key="SliderHorizontalThumbHeight">14</x:Double>
+                    <GridLength x:Key="SliderPreContentMargin">0</GridLength>
+                    <GridLength x:Key="SliderPostContentMargin">0</GridLength>
+                    <CornerRadius x:Key="SliderThumbCornerRadius">7</CornerRadius>
+                </Slider.Resources>
+            </Slider>
+            <ScottPlot:AvaPlot Grid.Row="2" Name="ResidualPlot" />
+        </Grid>
+    </DockPanel>
+</Window>

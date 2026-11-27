@@ -1,0 +1,110 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="using:FmrFit.App"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="640"
+        x:Class="FmrFit.App.DataExport"
+        Width="520" Height="640" MinWidth="380" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Title="FMR-fit – Export settings">
+    <Window.Styles>
+        <Style Selector="Border.row:pointerover">
+            <Setter Property="Background" Value="#18808080" />
+        </Style>
+        <Style Selector="Border.row.selected">
+            <Setter Property="Background" Value="#330078D7" />
+        </Style>
+        <Style Selector="Border.row.selected:pointerover">
+            <Setter Property="Background" Value="#4D0078D7" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="12" Grid.IsSharedSizeScope="True">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+            <TextBlock Text="Work files" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Name="SelectAllButton" Content="Select all" HotKey="Multiply"
+                    ToolTip.Tip="Select every file, or deselect all if all are selected (Num *)"
+                    Click="SelectAllButton_Click" />
+        </Grid>
+
+        <!-- Column names; the margin matches the rows' padding so the columns line up. -->
+        <Grid DockPanel.Dock="Top" Margin="8,0,8,4" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Check" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Frequency" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="1" Text="f (GHz)" HorizontalAlignment="Right" Opacity="0.7" />
+            <TextBlock Grid.Column="2" Text="File name" Opacity="0.7" />
+        </Grid>
+
+        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
+            <TextBlock Text="Format" FontWeight="SemiBold" />
+            <RadioButton Name="CsvMapFormat" GroupName="Format" IsChecked="True"
+                         Content="CSV for 3D plots: columns f (GHz), H (Oe), displayed value" />
+            <TextBlock Margin="28,-4,0,0" Opacity="0.7" TextWrapping="Wrap" FontSize="12"
+                       Text="One row per point, spectra in order of frequency. The value is the column each work file displays (signal, integral or derivative). With what was recorded (dP/dH or ~P) it stands for a quantity, which must be the same for all selected files: e.g. integrated dP/dH and ~P as recorded are both P. Short header: sample, frequency range and most regular step, field interpolation step, quantity and where it comes from." />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="28,0,0,0">
+                <TextBlock Text="Round values to" VerticalAlignment="Center" />
+                <local:NumberBox Name="DecimalsInput" Minimum="0" Maximum="15" Step="1" Format="0" Width="64"
+                                 Description="Decimal places of frequency, field and signal (0–15); trailing zeros are dropped."
+                                 ValueCommitted="DecimalsInput_ValueCommitted" />
+                <TextBlock Text="decimal places" VerticalAlignment="Center" />
+            </StackPanel>
+            <CheckBox Name="AlignCheckBox" Margin="28,0,0,0"
+                      ToolTip.Tip="For each spectrum, subtract the straight line through the mean of its first and the mean of its last points (number set by alignment_points in fmr-fit.ini), so both ends average 0. The line of every spectrum is noted in the file. Work files are not changed."
+                      IsCheckedChanged="AlignCheckBox_IsCheckedChanged" />
+            <CheckBox Name="ShiftCheckBox" Margin="28,0,0,0"
+                      ToolTip.Tip="For each spectrum, subtract the mean of its last points (number set by alignment_points in fmr-fit.ini), so the high-field end averages 0; no tilt is removed. Instead of Align, which already does this. The shift of every spectrum is noted in the file. Work files are not changed."
+                      IsCheckedChanged="ShiftCheckBox_IsCheckedChanged" />
+            <CheckBox Name="NormaliseCheckBox" Margin="28,0,0,0"
+                      Content="Normalise: divide each spectrum by its largest |value| (unit 1)"
+                      ToolTip.Tip="Done after aligning or shifting. Every spectrum gets max |value| = 1, so relative intensities between frequencies are lost; the divisor of every spectrum is noted in the file. Work files are not changed." />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+                <TextBlock Name="StatusText" VerticalAlignment="Center" Opacity="0.7" TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Name="ExportButton" Content="Export…" Classes="accent"
+                            ToolTip.Tip="Choose a file and write the selected spectra"
+                            Click="ExportButton_Click" />
+                    <Button Content="Cancel" IsCancel="True" Click="CancelButton_Click" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- Click toggles a file; dragging applies the first file's new state to every file passed over. -->
+        <Border BorderThickness="1" BorderBrush="#40808080" CornerRadius="4">
+            <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl Name="FileList" Background="Transparent" Padding="0,2"
+                              PointerPressed="FileList_PointerPressed"
+                              PointerMoved="FileList_PointerMoved"
+                              PointerReleased="FileList_PointerReleased"
+                              PointerCaptureLost="FileList_PointerCaptureLost">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:ExportFileItem">
+                            <Border Classes="row" Classes.selected="{Binding IsSelected}"
+                                    Background="Transparent" Padding="8,4" Margin="2,0" CornerRadius="3">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Check" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Frequency" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Shows the state only; the row handles the mouse. -->
+                                    <CheckBox IsChecked="{Binding IsSelected}" IsHitTestVisible="False" Focusable="False"
+                                              MinWidth="0" MinHeight="0" Padding="0" VerticalAlignment="Center" />
+                                    <!-- Invisible placeholder reserves room for values up to "44.444". -->
+                                    <TextBlock Grid.Column="1" Text="44.444" Opacity="0" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding FrequencyText}" HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" ToolTip.Tip="{Binding Path}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </DockPanel>
+</Window>
